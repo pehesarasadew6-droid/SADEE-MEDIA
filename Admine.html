@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SADEE MEDIA</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080808;color:#fff;font-family:Arial,sans-serif}
+header{position:sticky;top:0;z-index:10;height:64px;padding:0 16px;background:#111;border-bottom:1px solid #292929;display:flex;align-items:center;justify-content:space-between}
+.logo{color:#ff3030;font-weight:900;font-size:20px}
+.container{max-width:1100px;margin:auto;padding:18px}
+.card{background:#111;border:1px solid #292929;border-radius:16px;padding:18px;margin-bottom:16px}
+button{border:0;border-radius:10px;padding:11px 15px;background:#e52323;color:#fff;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6;cursor:not-allowed}
+.secondary{background:#292929}.danger{background:#8c1111}
+input,textarea{width:100%;padding:12px;margin:7px 0 12px;background:#080808;color:#fff;border:1px solid #333;border-radius:10px;outline:none}
+textarea{min-height:110px}
+.tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:18px}
+.tab{background:#1d1d1d;white-space:nowrap}.tab.active{background:#e52323}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.media{padding:0;overflow:hidden}.media img,.media video{width:100%;max-height:500px;object-fit:cover;display:block;background:#000}
+.media-body{padding:14px}
+.message{background:#151515;border-left:3px solid #e52323;border-radius:10px;padding:15px;margin-bottom:12px}
+
+.admin-message{
+  border:2px solid #e52323;
+  border-left:5px solid #e52323;
+  background:#171010;
+  box-shadow:0 0 15px rgba(229,35,35,.15);
+}
+.admin-badge{
+  display:inline-block;
+  background:#e52323;
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+  padding:5px 9px;
+  border-radius:7px;
+  margin-bottom:10px;
+  letter-spacing:.5px;
+}
+.hidden{display:none!important}.center{text-align:center}
+.small{font-size:13px;color:#999}.status{margin-top:10px;font-size:14px;min-height:20px}
+.success{color:#4ee27b}.error{color:#ff6060}.empty{text-align:center;color:#888;padding:25px}
+.admin-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #292929}
+.file-info{color:#999;font-size:13px;margin-bottom:10px}
+.chat-box{height:400px;overflow-y:auto;background:#080808;border:1px solid #292929;border-radius:12px;padding:12px;margin-bottom:12px}
+.chat-row{background:#151515;border-radius:10px;padding:10px;margin-bottom:8px}
+.chat-name{font-weight:bold;color:#ff4b4b}.chat-time{font-size:11px;color:#777;margin-top:5px}
+.chat-send{display:flex;gap:8px}.chat-send input{margin:0}
+.chat-send button{min-width:80px}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">SADEE MEDIA</div>
+  <div>
+    <button id="adminBtn" class="secondary" onclick="openAdmin()">ADMIN</button>
+    <button id="logoutBtn" class="secondary hidden" onclick="logout()">LOGOUT</button>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ================= USER APP ================= -->
+<section id="userApp">
+
+  <div class="tabs">
+    <button class="tab active" onclick="userTab('home',this)">Home</button>
+    <button class="tab" onclick="userTab('photos',this)">Photos</button>
+    <button class="tab" onclick="userTab('videos',this)">Videos</button>
+    <button class="tab" onclick="userTab('messages',this)">Messages</button>
+  </div>
+
+  <div id="homeTab">
+    <div class="card">
+      <h1>SADEE MEDIA</h1>
+      <p class="small">Photos • Videos • Messages • Live Chat</p>
+    </div>
+    <div class="card">
+      <h2>Latest</h2>
+      <div id="latest" class="grid"></div>
+    </div>
+  </div>
+
+  <div id="photosTab" class="hidden">
+    <div class="card">
+      <h2>Photos</h2>
+      <div id="photos" class="grid"></div>
+    </div>
+  </div>
+
+  <div id="videosTab" class="hidden">
+    <div class="card">
+      <h2>Videos</h2>
+      <div id="videos" class="grid"></div>
+    </div>
+  </div>
+
+  <div id="messagesTab" class="hidden">
+
+    <!-- ================= ADMIN ANNOUNCEMENTS ================= -->
+    <div class="card">
+      <h2>📢 SADEE MEDIA ANNOUNCEMENTS</h2>
+      <p class="small">Official messages published by SADEE MEDIA Admin.</p>
+
+      <div id="publishedMessages">
+        <div class="empty">Loading messages...</div>
+      </div>
+    </div>
+
+    <!-- ================= USER CHAT ================= -->
+    <div class="card">
+      <h2>💬 SADEE MEDIA CHAT</h2>
+
+      <input id="chatUsername" type="text" placeholder="Your name" maxlength="30">
+
+      <div id="chatMessages" class="chat-box">
+        <div class="empty">Loading chat...</div>
+      </div>
+
+      <div class="chat-send">
+        <input id="chatInput" type="text" placeholder="Write a message..." maxlength="500">
+        <button id="chatSendButton" onclick="sendChatMessage()">SEND</button>
+      </div>
+
+      <div id="chatStatus" class="status"></div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ================= LOGIN ================= -->
+<section id="loginApp" class="hidden">
+  <div class="card center" style="max-width:430px;margin:70px auto">
+    <h2>ADMIN LOGIN</h2>
+    <p class="small">Enter admin password</p>
+
+    <input id="adminPassword" type="password" placeholder="Admin password"
+      onkeydown="if(event.key==='Enter') login()">
+
+    <button id="loginButton" style="width:100%" onclick="login()">LOGIN</button>
+
+    <div id="loginStatus" class="status"></div>
+
+    <br>
+    <button class="secondary" onclick="backHome()">BACK</button>
+  </div>
+</section>
+
+<!-- ================= ADMIN ================= -->
+<section id="adminApp" class="hidden">
+
+  <div class="tabs">
+    <button class="tab active" onclick="adminTab('dashboard',this)">Dashboard</button>
+    <button class="tab" onclick="adminTab('upload',this)">Upload</button>
+    <button class="tab" onclick="adminTab('message',this)">Message</button>
+    <button class="tab" onclick="adminTab('manage',this)">Manage</button>
+  </div>
+
+  <div id="dashboardTab">
+    <div class="card">
+      <h2>Admin Dashboard</h2>
+      <p class="small">Manage photos, videos and messages.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card center"><h2 id="photoCount">0</h2><p>Photos</p></div>
+      <div class="card center"><h2 id="videoCount">0</h2><p>Videos</p></div>
+      <div class="card center"><h2 id="messageCount">0</h2><p>Messages</p></div>
+    </div>
+  </div>
+
+  <div id="uploadTab" class="hidden">
+    <div class="card">
+      <h2>Upload Photo / Video</h2>
+
+      <input id="mediaTitle" placeholder="Title">
+
+      <input id="mediaFile" type="file" accept="image/*,video/*" onchange="showFileInfo()">
+
+      <div id="fileInfo" class="file-info"></div>
+
+      <button id="uploadButton" onclick="uploadMedia()">UPLOAD & PUBLISH</button>
+
+      <div id="uploadStatus" class="status"></div>
+    </div>
+  </div>
+
+  <div id="messageTab" class="hidden">
+    <div class="card">
+      <h2>Publish Message</h2>
+
+      <input id="messageTitle" placeholder="Message title">
+
+      <textarea id="messageText" placeholder="Write message..."></textarea>
+
+      <button id="messageButton" onclick="publishMessage()">PUBLISH MESSAGE</button>
+
+      <div id="messageStatus" class="status"></div>
+    </div>
+  </div>
+
+  <div id="manageTab" class="hidden">
+    <div class="card">
+      <h2>Manage Photos & Videos</h2>
+      <p class="small">Delete published photos and videos.</p>
+      <div id="manageList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Manage Admin Messages</h2>
+      <p class="small">Delete messages published from the Admin Message tab.</p>
+      <div id="manageMessagesList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Manage User Chat</h2>
+      <p class="small">Delete any user chat message from the website.</p>
+      <div id="manageChatList"></div>
+    </div>
+  </div>
+
+</section>
+
+</div>
+
+<script>
+/* =====================================================
+   SUPABASE SETTINGS
+===================================================== */
+
+const SUPABASE_URL =
+  "https://xeijokcqujxspgykgqbq.supabase.co";
+
+const SUPABASE_ANON_KEY =
+  "sb_publishable_jsiKDly-fE6KxnvtTP4fpw_jyuO3EtC";
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+/*
+   Current admin password from your setup.
+
+   IMPORTANT:
+   This is only a front-end gate, NOT secure authentication.
+   For a public production website, use Supabase Auth.
+*/
+const ADMIN_PASSWORD = "SADEE6570";
+
+let isAdmin = false;
+let chatChannel = null;
+
+/* =====================================================
+   USER TABS
+===================================================== */
+
+window.userTab = function(name,btn){
+
+  document.querySelectorAll("#userApp .tab")
+    .forEach(x => x.classList.remove("active"));
+
+  btn.classList.add("active");
+
+  ["home","photos","videos","messages"].forEach(x => {
+    document.getElementById(x + "Tab").classList.add("hidden");
+  });
+
+  document.getElementById(name + "Tab").classList.remove("hidden");
+
+  if(name === "messages"){
+    loadChatMessages();
+    startChatRealtime();
+  }
+};
+
+/* =====================================================
+   ADMIN OPEN / BACK
+===================================================== */
+
+window.openAdmin = function(){
+
+  document.getElementById("userApp").classList.add("hidden");
+  document.getElementById("loginApp").classList.remove("hidden");
+
+  document.getElementById("adminPassword").value = "";
+  document.getElementById("loginStatus").textContent = "";
+};
+
+window.backHome = function(){
+
+  document.getElementById("loginApp").classList.add("hidden");
+  document.getElementById("userApp").classList.remove("hidden");
+};
+
+/* =====================================================
+   LOGIN
+===================================================== */
+
+window.login = function(){
+
+  const password =
+    document.getElementById("adminPassword").value;
+
+  const status =
+    document.getElementById("loginStatus");
+
+  if(password !== ADMIN_PASSWORD){
+
+    status.textContent = "Wrong admin password.";
+    status.className = "status error";
+    return;
+  }
+
+  isAdmin = true;
+
+  document.getElementById("loginApp").classList.add("hidden");
+  document.getElementById("userApp").classList.add("hidden");
+  document.getElementById("adminApp").classList.remove("hidden");
+
+  document.getElementById("adminBtn").classList.add("hidden");
+  document.getElementById("logoutBtn").classList.remove("hidden");
+
+  loadAdmin();
+};
+
+/* =====================================================
+   LOGOUT
+===================================================== */
+
+window.logout = function(){
+
+  isAdmin = false;
+
+  document.getElementById("adminApp").classList.add("hidden");
+  document.getElementById("logoutBtn").classList.add("hidden");
+  document.getElementById("adminBtn").classList.remove("hidden");
+  document.getElementById("userApp").classList.remove("hidden");
+};
+
+/* =====================================================
+   ADMIN TABS
+===================================================== */
+
+window.adminTab = function(name,btn){
+
+  document.querySelectorAll("#adminApp .tab")
+    .forEach(x => x.classList.remove("active"));
+
+  btn.classList.add("active");
+
+  ["dashboardTab","uploadTab","messageTab","manageTab"]
+    .forEach(id => document.getElementById(id).classList.add("hidden"));
+
+  document.getElementById(name + "Tab").classList.remove("hidden");
+};
+
+/* =====================================================
+   FILE INFO
+===================================================== */
+
+window.showFileInfo = function(){
+
+  const file =
+    document.getElementById("mediaFile").files[0];
+
+  const info =
+    document.getElementById("fileInfo");
+
+  if(!file){
+    info.textContent = "";
+    return;
+  }
+
+  const size = file.size / 1024 / 1024;
+
+  const type =
+    file.type.startsWith("video") ? "VIDEO" : "PHOTO";
+
+  info.textContent =
+    type + " • " + file.name + " • " + size.toFixed(2) + " MB";
+};
+
+/* =====================================================
+   SUPABASE STORAGE UPLOAD
+===================================================== */
+
+async function supabaseStorageUpload(file){
+
+  const extension =
+    file.name.includes(".")
+      ? file.name.split(".").pop().toLowerCase()
+      : "bin";
+
+  const folder =
+    file.type.startsWith("video")
+      ? "videos"
+      : "photos";
+
+  const filename =
+    Date.now() +
+    "-" +
+    crypto.randomUUID() +
+    "." +
+    extension;
+
+  const path =
+    folder + "/" + filename;
+
+  const { error } =
+    await supabaseClient
+      .storage
+      .from("media")
+      .upload(path, file, {
+        cacheControl:"3600",
+        upsert:false,
+        contentType:file.type
+      });
+
+  if(error) throw error;
+
+  const { data } =
+    supabaseClient
+      .storage
+      .from("media")
+      .getPublicUrl(path);
+
+  return {
+    path:path,
+    url:data.publicUrl
+  };
+}
+
+/* =====================================================
+   UPLOAD PHOTO / VIDEO
+===================================================== */
+
+window.uploadMedia = async function(){
+
+  if(!isAdmin){
+    alert("Please login first.");
+    return;
+  }
+
+  const title =
+    document.getElementById("mediaTitle").value.trim();
+
+  const file =
+    document.getElementById("mediaFile").files[0];
+
+  const status =
+    document.getElementById("uploadStatus");
+
+  const button =
+    document.getElementById("uploadButton");
+
+  if(!file){
+    status.textContent = "Select a photo or video.";
+    status.className = "status error";
+    return;
+  }
+
+  if(file.size > 50 * 1024 * 1024){
+    status.textContent = "Maximum file size is 50 MB on Supabase Free.";
+    status.className = "status error";
+    return;
+  }
+
+  try{
+
+    button.disabled = true;
+    button.textContent = "UPLOADING...";
+    status.textContent = "Uploading to Supabase Storage...";
+    status.className = "status";
+
+    const type =
+      file.type.startsWith("video")
+        ? "video"
+        : "photo";
+
+    const uploaded =
+      await supabaseStorageUpload(file);
+
+    status.textContent = "Saving post...";
+
+    const { error } =
+      await supabaseClient
+        .from("posts")
+        .insert({
+          title:title || file.name,
+          type:type,
+          url:uploaded.url,
+          storage_path:uploaded.path
+        });
+
+    if(error) throw error;
+
+    status.textContent = "Upload successful!";
+    status.className = "status success";
+
+    document.getElementById("mediaTitle").value = "";
+    document.getElementById("mediaFile").value = "";
+    document.getElementById("fileInfo").textContent = "";
+
+    await loadUser();
+    await loadAdmin();
+
+  }catch(error){
+
+    console.error("UPLOAD ERROR:",error);
+
+    status.textContent =
+      error.message || "Upload failed.";
+
+    status.className = "status error";
+
+  }finally{
+
+    button.disabled = false;
+    button.textContent = "UPLOAD & PUBLISH";
+  }
+};
+
+/* =====================================================
+   PUBLISH MESSAGE
+===================================================== */
+
+window.publishMessage = async function(){
+
+  if(!isAdmin){
+    alert("Please login first.");
+    return;
+  }
+
+  const title =
+    document.getElementById("messageTitle").value.trim();
+
+  const text =
+    document.getElementById("messageText").value.trim();
+
+  const status =
+    document.getElementById("messageStatus");
+
+  const button =
+    document.getElementById("messageButton");
+
+  if(!text){
+    status.textContent = "Write a message.";
+    status.className = "status error";
+    return;
+  }
+
+  try{
+
+    button.disabled = true;
+    button.textContent = "PUBLISHING...";
+
+    const { error } =
+      await supabaseClient
+        .from("messages")
+        .insert({
+          title:title || "Message",
+          text:text,
+          sender_type:"admin"
+        });
+
+    if(error) throw error;
+
+    status.textContent = "Message published.";
+    status.className = "status success";
+
+    document.getElementById("messageTitle").value = "";
+    document.getElementById("messageText").value = "";
+
+    await loadUser();
+    await loadAdmin();
+
+  }catch(error){
+
+    console.error(error);
+
+    status.textContent =
+      error.message || "Message publish failed.";
+
+    status.className = "status error";
+
+  }finally{
+
+    button.disabled = false;
+    button.textContent = "PUBLISH MESSAGE";
+  }
+};
+
+/* =====================================================
+   GET POSTS
+===================================================== */
+
+async function getPosts(){
+
+  const { data,error } =
+    await supabaseClient
+      .from("posts")
+      .select("*")
+      .order("created_at",{ascending:false});
+
+  if(error) throw error;
+
+  return data || [];
+}
+
+/* =====================================================
+   GET MESSAGES
+===================================================== */
+
+async function getMessages(){
+
+  const { data,error } =
+    await supabaseClient
+      .from("messages")
+      .select("*")
+      .order("created_at",{ascending:false});
+
+  if(error) throw error;
+
+  return data || [];
+}
+
+/* =====================================================
+   LOAD USER
+===================================================== */
+
+async function loadUser(){
+
+  const latest = document.getElementById("latest");
+  const photos = document.getElementById("photos");
+  const videos = document.getElementById("videos");
+
+  latest.innerHTML = "<div class='empty'>Loading...</div>";
+  photos.innerHTML = "<div class='empty'>Loading...</div>";
+  videos.innerHTML = "<div class='empty'>Loading...</div>";
+
+  try{
+
+    const posts = await getPosts();
+
+    latest.innerHTML = "";
+    photos.innerHTML = "";
+    videos.innerHTML = "";
+
+    posts.forEach((post,index) => {
+
+      const type =
+        String(post.type || "").toLowerCase();
+
+      if(type === "photo"){
+        photos.appendChild(createMediaCard(post));
+      }
+
+      if(type === "video"){
+        videos.appendChild(createMediaCard(post));
+      }
+
+      if(index < 6){
+        latest.appendChild(createMediaCard(post));
+      }
+    });
+
+    if(!photos.children.length){
+      photos.innerHTML = "<div class='empty'>No photos yet.</div>";
+    }
+
+    if(!videos.children.length){
+      videos.innerHTML = "<div class='empty'>No videos yet.</div>";
+    }
+
+    if(!latest.children.length){
+      latest.innerHTML = "<div class='empty'>No content yet.</div>";
+    }
+
+  }catch(error){
+
+    console.error(error);
+
+    latest.innerHTML =
+      "<div class='error'>Could not load content.</div>";
+  }
+
+  await loadMessages();
+}
+
+/* =====================================================
+   MEDIA CARD
+===================================================== */
+
+function createMediaCard(post){
+
+  const div = document.createElement("div");
+  div.className = "card media";
+
+  const title = escapeHTML(post.title || "");
+  const url = escapeAttr(post.url || "");
+
+  if(String(post.type).toLowerCase() === "video"){
+
+    div.innerHTML = `
+      <video controls playsinline preload="metadata" src="${url}"></video>
+      <div class="media-body">
+        <h3>${title}</h3>
+      </div>
+    `;
+
+  }else{
+
+    div.innerHTML = `
+      <img src="${url}" loading="lazy" alt="${title}">
+      <div class="media-body">
+        <h3>${title}</h3>
+      </div>
+    `;
+  }
+
+  return div;
+}
+
+/* =====================================================
+   LOAD MESSAGES
+===================================================== */
+
+async function loadMessages(){
+
+  const box =
+    document.getElementById("publishedMessages");
+
+  if(!box) return;
+
+  box.innerHTML =
+    "<div class='empty'>Loading messages...</div>";
+
+  try{
+
+    const messages =
+      await getMessages();
+
+    box.innerHTML = "";
+
+    messages.forEach(message => {
+
+      /*
+        Only messages published by Admin are shown
+        in the public announcement area.
+      */
+      if(
+        String(message.sender_type || "")
+          .toLowerCase() !== "admin"
+      ){
+        return;
+      }
+
+      const div =
+        document.createElement("div");
+
+      div.className =
+        "message admin-message";
+
+      div.innerHTML = `
+
+        <div class="admin-badge">
+          👑 ADMIN
+        </div>
+
+        <h3>
+          ${escapeHTML(
+            message.title || "Message"
+          )}
+        </h3>
+
+        <p>
+          ${escapeHTML(
+            message.text || ""
+          )}
+        </p>
+
+      `;
+
+      box.appendChild(div);
+
+    });
+
+    if(!box.children.length){
+
+      box.innerHTML =
+        "<div class='empty'>No admin messages yet.</div>";
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "MESSAGE LOAD ERROR:",
+      error
+    );
+
+    box.innerHTML =
+      "<div class='error'>Could not load messages.</div>";
+
+  }
+}
+
+/* =====================================================
+   ADMIN
+===================================================== */
+
+async function loadAdmin(){
+
+  if(!isAdmin) return;
+
+  try{
+
+    const posts = await getPosts();
+
+    let photos = 0;
+    let videos = 0;
+
+    posts.forEach(post => {
+
+      if(String(post.type).toLowerCase() === "photo") photos++;
+      if(String(post.type).toLowerCase() === "video") videos++;
+    });
+
+    document.getElementById("photoCount").textContent = photos;
+    document.getElementById("videoCount").textContent = videos;
+
+    const messages = await getMessages();
+
+    document.getElementById("messageCount").textContent =
+      messages.length;
+
+    await loadManage();
+
+  }catch(error){
+
+    console.error("ADMIN ERROR:",error);
+  }
+}
+
+/* =====================================================
+   MANAGE
+===================================================== */
+
+async function loadManage(){
+
+  const box = document.getElementById("manageList");
+  const messageBox = document.getElementById("manageMessagesList");
+  const chatBox = document.getElementById("manageChatList");
+
+  box.innerHTML = "<div class='empty'>Loading posts...</div>";
+  messageBox.innerHTML = "<div class='empty'>Loading messages...</div>";
+  chatBox.innerHTML = "<div class='empty'>Loading user chat...</div>";
+
+  try{
+
+    const posts = await getPosts();
+    box.innerHTML = "";
+
+    posts.forEach(post => {
+
+      const item = document.createElement("div");
+      item.className = "admin-item";
+
+      item.innerHTML = `
+        <div style="min-width:0;flex:1">
+          <strong>${escapeHTML(post.title || "Untitled")}</strong>
+          <div class="small">
+            ${escapeHTML(post.type || "")} • ${escapeHTML(post.storage_path || "")}
+          </div>
+        </div>
+        <button class="danger">DELETE</button>
+      `;
+
+      item.querySelector("button").onclick = () => deletePost(post);
+      box.appendChild(item);
+    });
+
+    if(!box.children.length){
+      box.innerHTML = "<div class='empty'>No photos or videos yet.</div>";
+    }
+
+    const messages = await getMessages();
+    messageBox.innerHTML = "";
+
+    messages
+      .filter(message =>
+        String(message.sender_type || "admin").toLowerCase() === "admin"
+      )
+      .forEach(message => {
+
+        const item = document.createElement("div");
+        item.className = "admin-item";
+
+        item.innerHTML = `
+          <div style="min-width:0;flex:1">
+            <strong>${escapeHTML(message.title || "Message")}</strong>
+            <div class="small">
+              👑 ADMIN • ${escapeHTML(message.text || "")}
+            </div>
+          </div>
+          <button class="danger">DELETE</button>
+        `;
+
+        item.querySelector("button").onclick = () => deleteAdminMessage(message);
+        messageBox.appendChild(item);
+      });
+
+    if(!messageBox.children.length){
+      messageBox.innerHTML = "<div class='empty'>No admin messages yet.</div>";
+    }
+
+    // User chat messages
+    const { data:chatMessages, error:chatError } =
+      await supabaseClient
+        .from("chat_messages")
+        .select("*")
+        .order("created_at",{ascending:false});
+
+    if(chatError) throw chatError;
+
+    chatBox.innerHTML = "";
+
+    (chatMessages || []).forEach(chat => {
+
+      const item = document.createElement("div");
+      item.className = "admin-item";
+
+      item.innerHTML = `
+        <div style="min-width:0;flex:1">
+          <strong>💬 ${escapeHTML(chat.username || "User")}</strong>
+          <div class="small" style="margin-top:4px">
+            ${escapeHTML(chat.message || "")}
+          </div>
+          <div class="small">
+            ${chat.created_at ? new Date(chat.created_at).toLocaleString() : ""}
+          </div>
+        </div>
+        <button class="danger">DELETE</button>
+      `;
+
+      item.querySelector("button").onclick = () => deleteChatMessage(chat);
+      chatBox.appendChild(item);
+    });
+
+    if(!chatBox.children.length){
+      chatBox.innerHTML = "<div class='empty'>No user chat messages yet.</div>";
+    }
+
+  }catch(error){
+
+    console.error("MANAGE ERROR:",error);
+
+    box.innerHTML =
+      "<div class='error'>Could not load posts.</div>";
+
+    messageBox.innerHTML =
+      "<div class='error'>Could not load messages.</div>";
+
+    chatBox.innerHTML =
+      "<div class='error'>Could not load user chat.</div>";
+  }
+}
+
+/* =====================================================
+   DELETE POST + STORAGE FILE
+===================================================== */
+
+async function deletePost(post){
+
+  if(!isAdmin){
+    alert("Please login first.");
+    return;
+  }
+
+  if(!post?.id){
+    alert("Post ID not found.");
+    return;
+  }
+
+  if(!confirm("Delete this photo/video permanently?")) return;
+
+  try{
+
+    // First remove the actual file from Supabase Storage.
+    if(post.storage_path){
+
+      const { error:storageError } =
+        await supabaseClient
+          .storage
+          .from("media")
+          .remove([post.storage_path]);
+
+      if(storageError){
+        throw new Error(
+          "Storage delete failed: " + storageError.message
+        );
+      }
+    }
+
+    // Then remove the database row.
+    const { error } =
+      await supabaseClient
+        .from("posts")
+        .delete()
+        .eq("id",post.id);
+
+    if(error) throw error;
+
+    await loadUser();
+    await loadAdmin();
+
+    alert("Photo/video deleted successfully.");
+
+  }catch(error){
+
+    console.error("DELETE POST ERROR:",error);
+
+    alert(
+      "Delete failed: " +
+      (error.message || error)
+    );
+  }
+}
+
+/* =====================================================
+   DELETE ADMIN MESSAGE
+===================================================== */
+
+async function deleteAdminMessage(message){
+
+  if(!isAdmin){
+    alert("Please login first.");
+    return;
+  }
+
+  if(!message?.id){
+    alert("Message ID not found.");
+    return;
+  }
+
+  if(!confirm("Delete this admin message permanently?")) return;
+
+  try{
+
+    const { error } =
+      await supabaseClient
+        .from("messages")
+        .delete()
+        .eq("id",message.id);
+
+    if(error) throw error;
+
+    await loadUser();
+    await loadAdmin();
+
+    alert("Admin message deleted successfully.");
+
+  }catch(error){
+
+    console.error("DELETE MESSAGE ERROR:",error);
+
+    alert(
+      "Message delete failed: " +
+      (error.message || error)
+    );
+  }
+}
+
+
+/* =====================================================
+   DELETE USER CHAT MESSAGE
+===================================================== */
+
+async function deleteChatMessage(chat){
+
+  if(!isAdmin){
+    alert("Please login first.");
+    return;
+  }
+
+  if(!chat?.id){
+    alert("Chat message ID not found.");
+    return;
+  }
+
+  if(!confirm("Delete this user's chat message permanently?")) return;
+
+  try{
+
+    const { error } =
+      await supabaseClient
+        .from("chat_messages")
+        .delete()
+        .eq("id",chat.id);
+
+    if(error) throw error;
+
+    await loadChatMessages();
+    await loadAdmin();
+
+    alert("User chat message deleted successfully.");
+
+  }catch(error){
+
+    console.error("DELETE CHAT ERROR:",error);
+
+    alert(
+      "Chat delete failed: " +
+      (error.message || error)
+    );
+  }
+}
+
+/* =====================================================
+   REALTIME USER CHAT
+===================================================== */
+
+async function loadChatMessages(){
+
+  const box =
+    document.getElementById("chatMessages");
+
+  if(!box) return;
+
+  try{
+
+    const { data,error } =
+      await supabaseClient
+        .from("chat_messages")
+        .select("*")
+        .order("created_at",{ascending:true});
+
+    if(error) throw error;
+
+    box.innerHTML = "";
+
+    (data || []).forEach(message => {
+
+      const div = document.createElement("div");
+      div.className = "chat-row";
+
+      div.innerHTML = `
+        <div class="chat-name">
+          ${escapeHTML(message.username)}
+        </div>
+
+        <div style="margin-top:4px">
+          ${escapeHTML(message.message)}
+        </div>
+
+        <div class="chat-time">
+          ${new Date(message.created_at).toLocaleString()}
+        </div>
+      `;
+
+      box.appendChild(div);
+    });
+
+    if(!box.children.length){
+      box.innerHTML =
+        "<div class='empty'>No chat messages yet.</div>";
+    }
+
+    box.scrollTop = box.scrollHeight;
+
+  }catch(error){
+
+    console.error("CHAT LOAD ERROR:",error);
+
+    box.innerHTML =
+      "<div class='error'>Could not load chat.</div>";
+  }
+}
+
+window.sendChatMessage = async function(){
+
+  const username =
+    document.getElementById("chatUsername").value.trim();
+
+  const message =
+    document.getElementById("chatInput").value.trim();
+
+  const status =
+    document.getElementById("chatStatus");
+
+  const button =
+    document.getElementById("chatSendButton");
+
+  if(!username){
+
+    status.textContent = "Enter your name.";
+    status.className = "status error";
+    return;
+  }
+
+  if(!message){
+
+    status.textContent = "Write a message.";
+    status.className = "status error";
+    return;
+  }
+
+  try{
+
+    button.disabled = true;
+
+    const { error } =
+      await supabaseClient
+        .from("chat_messages")
+        .insert({
+          username:username,
+          message:message
+        });
+
+    if(error) throw error;
+
+    document.getElementById("chatInput").value = "";
+
+    status.textContent = "";
+    status.className = "status";
+
+  }catch(error){
+
+    console.error("CHAT SEND ERROR:",error);
+
+    status.textContent =
+      error.message || "Message failed to send.";
+
+    status.className = "status error";
+
+  }finally{
+
+    button.disabled = false;
+  }
+};
+
+function startChatRealtime(){
+
+  if(chatChannel) return;
+
+  chatChannel =
+    supabaseClient
+      .channel("sadee-media-chat")
+      .on(
+        "postgres_changes",
+        {
+          event:"INSERT",
+          schema:"public",
+          table:"chat_messages"
+        },
+        () => loadChatMessages()
+      )
+      .subscribe();
+}
+
+/* =====================================================
+   ENTER TO SEND CHAT
+===================================================== */
+
+document.addEventListener("keydown",event => {
+
+  if(
+    event.key === "Enter" &&
+    document.activeElement?.id === "chatInput"
+  ){
+
+    event.preventDefault();
+    sendChatMessage();
+  }
+});
+
+/* =====================================================
+   ESCAPE
+===================================================== */
+
+function escapeHTML(value){
+
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function escapeAttr(value){
+
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+
+/* =====================================================
+   START
+===================================================== */
+
+loadUser();
+startChatRealtime();
+
+</script>
+</body>
+</html>
